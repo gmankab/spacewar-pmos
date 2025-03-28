@@ -1,0 +1,64 @@
+name: build
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      ARCH: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - name: git clone
+        run: |
+          git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git /tmp/pmaports
+          git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap /tmp/pmbootstrap --depth 1
+          git clone https://github.com/mainlining/linux --branch danila/spacewar-testing /tmp/linux --depth 1
+      - name: pmaports cherry pick
+        run: |
+          # checking out stable branch, later ones are failing to build
+          cd /tmp/pmaports
+          git checkout 89fe8efd03d7b70a2ec7d6b11bf3d84545732657 -B master
+          git config --global user.email gmankab@gmail.com
+          git config --global user.name gmanka
+          git remote add mainlining https://github.com/mainlining/pmaports
+          git fetch mainlining danila/spacewar-mr
+          git cherry-pick bc4c5a94adf4f515e4bb6c51e55a76b5d86cfe7b
+      - name: pmbootstrap init
+        run: |
+          cp $GITHUB_WORKSPACE/pmbootstrap_v3.cfg ~/.config/pmbootstrap_v3.cfg
+          yes '' | python3 /tmp/pmbootstrap/pmbootstrap.py init
+      - name: build kernel
+        run: |
+          python3 /tmp/pmbootstrap/pmbootstrap.py build linux-postmarketos-qcom-sc7280 --force --src /tmp/linux
+      - name: build images
+        run: |
+          python3 /tmp/pmbootstrap/pmbootstrap.py install --password 147147 --filesystem btrfs
+      - name: copy artifacts
+        id: artifacts
+        run: |
+          mkdir /tmp/artifacts
+          mkdir /tmp/artifacts-compressed
+          cp ~/.local/var/pmbootstrap/chroot_rootfs_nothing-spacewar/boot/boot.img /tmp/artifacts/nothing-spacewar-boot.img
+          cp ~/.local/var/pmbootstrap/chroot_native/home/pmos/rootfs/nothing-spacewar.img /tmp/artifacts/nothing-spacewar.img
+          xz -c /tmp/artifacts/nothing-spacewar-boot.img > /tmp/artifacts-compressed/nothing-spacewar-boot.img.xz
+          xz -c /tmp/artifacts/nothing-spacewar.img > /tmp/artifacts-compressed/nothing-spacewar.img.xz
+          echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+      - name: upload artifact nothing-spacewar-boot.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: nothing-spacewar-boot-img
+          path: /tmp/artifacts/nothing-spacewar-boot.img
+      - name: upload artifact nothing-spacewar.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: nothing-spacewar-img
+          path: /tmp/artifacts/nothing-spacewar.img
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: /tmp/artifacts-compressed/*
+          tag: ${{ steps.artifacts.outputs.date }}
+          commit: main
+
