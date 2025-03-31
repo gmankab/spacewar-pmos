@@ -18,9 +18,7 @@ jobs:
           git clone https://github.com/mainlining/linux --branch danila/spacewar-testing /tmp/linux --depth 1
       - name: pmaports cherry pick
         run: |
-          # checking out stable branch, later ones are failing to build
           cd /tmp/pmaports
-          git checkout 89fe8efd03d7b70a2ec7d6b11bf3d84545732657 -B master
           git config --global user.email gmankab@gmail.com
           git config --global user.name gmanka
           git remote add mainlining https://github.com/mainlining/pmaports
@@ -56,9 +54,9 @@ jobs:
         with:
           name: nothing-spacewar-img
           path: /tmp/artifacts/nothing-spacewar.img
-      - uses: ncipollo/release-action@v1
-        with:
-          artifacts: /tmp/artifacts-compressed/*
-          tag: ${{ steps.artifacts.outputs.date }}
-          commit: main
+      # - uses: ncipollo/release-action@v1
+      #   with:
+      #     artifacts: /tmp/artifacts-compressed/*
+      #     tag: ${{ steps.artifacts.outputs.date }}
+      #     commit: main
 
