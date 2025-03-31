@@ -9,8 +9,13 @@ jobs:
       contents: write
     env:
       ARCH: arm64
+      CROSS_COMPILE: aarch64-linux-gnu-
     steps:
       - uses: actions/checkout@v4
+      - name: deps
+        run: |
+          sudo apt upgrade -y
+          sudo apt install -y libssl-dev python3 make kpartx flex bison gcc gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
       - name: git clone
         run: |
           git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git /tmp/pmaports
@@ -30,7 +35,11 @@ jobs:
           yes '' | python3 /tmp/pmbootstrap/pmbootstrap.py init
       - name: build kernel
         run: |
-          python3 /tmp/pmbootstrap/pmbootstrap.py build linux-postmarketos-qcom-sc7280 --force --src /tmp/linux
+          cd /tmp/linux
+          source /tmp/pmbootstrap/helpers/envkernel.sh
+          make defconfig sc7280.config
+          make -j$(nproc)
+          python3 /tmp/pmbootstrap/pmbootstrap.py build linux-postmarketos-qcom-sc7280 --force --envkernel
       - name: build images
         run: |
           python3 /tmp/pmbootstrap/pmbootstrap.py install --password 147147 --filesystem btrfs
