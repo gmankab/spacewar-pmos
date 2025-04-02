@@ -15,7 +15,7 @@ jobs:
       - name: deps
         run: |
           sudo apt upgrade -y
-          sudo apt install -y libssl-dev python3 make kpartx flex bison gcc gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          sudo apt install -y libssl-dev python3 make kpartx flex bison gcc gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user-static
       - name: git clone
         run: |
           git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git /tmp/pmaports
@@ -26,23 +26,20 @@ jobs:
           cd /tmp/pmaports
           git config --global user.email gmankab@gmail.com
           git config --global user.name gmanka
-          git remote add mainlining https://github.com/mainlining/pmaports
-          git fetch mainlining danila/spacewar-mr
-          git cherry-pick bc4c5a94adf4f515e4bb6c51e55a76b5d86cfe7b
+          git remote add gmanka https://github.com/gmankab/pmaports
+          git fetch gmanka nothing-spacewar
+          git cherry-pick eb54b7c7378bce2af880d3d3a979de79e4fe048b 84ca162d0be04be36d2767c7597896a9dde51789
       - name: pmbootstrap init
         run: |
           cp $GITHUB_WORKSPACE/pmbootstrap_v3.cfg ~/.config/pmbootstrap_v3.cfg
           yes '' | python3 /tmp/pmbootstrap/pmbootstrap.py init
-      - name: build kernel
+      - name: build kernel and images
         run: |
-          cd /tmp/linux
-          source /tmp/pmbootstrap/helpers/envkernel.sh
-          make defconfig sc7280.config
-          make -j$(nproc)
-          python3 /tmp/pmbootstrap/pmbootstrap.py build linux-postmarketos-qcom-sc7280 --force --envkernel
-      - name: build images
+          bash $GITHUB_WORKSPACE/build.sh
+      - name: log
+        if: always()
         run: |
-          python3 /tmp/pmbootstrap/pmbootstrap.py install --password 147147 --filesystem btrfs
+          cat ~/.local/var/pmbootstrap/log.txt
       - name: copy artifacts
         id: artifacts
         run: |
